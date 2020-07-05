@@ -81,7 +81,7 @@ class VersionFile:
     def contains_version(self):
         return bool(self.version)
 
-    def update_version(self, no_pipe_bypass=False):
+    def update_version(self, no_pipe_bypass=False, force_suffix=False):
         found = False
         with TemporaryDirectory() as tmp_dir:
             tmp_path = Path(tmp_dir).joinpath('tmp.txt')
@@ -96,7 +96,7 @@ class VersionFile:
                         m = VERSION_PAT.match(line)
                         if m:
                             found = True
-                            new_line = updated_version_line(m.groups(), no_pipe_bypass)
+                            new_line = updated_version_line(m.groups(), no_pipe_bypass, force_suffix)
                             f_out.write(new_line)
                         else:
                             f_out.write(line)
