@@ -114,12 +114,14 @@ class VersionFile:
                 return cls(path, *args, **kwargs)
             raise VersionIncrError('--file / -f must be the path to a file that exists')
 
+        ignore = re.compile(r'[/\\](\.?venv|site-packages)(?:[/\\]|$)', re.IGNORECASE).search
         for root, dirs, files in os.walk(os.getcwd()):
-            root = Path(root)
-            for file in files:
-                path = root.joinpath(file)
-                if path.name == '__version__.py':
-                    return cls(path, *args, **kwargs)
+            if not ignore(root):
+                root = Path(root)
+                for file in files:
+                    path = root.joinpath(file)
+                    if path.name == '__version__.py':
+                        return cls(path, *args, **kwargs)
 
         setup_path = Path('setup.py')
         if setup_path.is_file():
