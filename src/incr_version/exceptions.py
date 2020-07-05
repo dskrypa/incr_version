@@ -1,0 +1,2 @@
+class VersionIncrError(Exception):
+    pass

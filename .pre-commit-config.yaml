@@ -1,0 +1,10 @@
+repos:
+  - repo: local
+    hooks:
+      - id: incr_version
+        name: incr_version
+        entry: incr_version
+        language: python
+        language_version: python3
+        pass_filenames: false
+        args: ['-f', 'src/__version__.py', '-d']
