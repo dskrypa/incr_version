@@ -38,16 +38,21 @@ def updated_version_line(groups, no_pipe_bypass, force_suffix=False):
     today = datetime.now().date()
     today_str = today.strftime('%Y.%m.%d')
     if old_date < today and not force_suffix:
-        # log.info('Replacing old version={} with new={}'.format(old_ver, today_str))
-        stdout_write('\nUpdating version from {} to {}\n'.format(old_ver, today_str), no_pipe_bypass)
+        if no_pipe_bypass:
+            log.info('Replacing old version={} with new={}'.format(old_ver, today_str))
+        else:
+            stdout_write(' ({} -> {}) '.format(old_ver, today_str))
         return '{0}{1}{2}{1}\n'.format(groups[0], groups[1], today_str)
     else:
         if old_suffix:
             new_suffix = int(old_suffix[1:]) + 1
         else:
             new_suffix = 1
-        # log.info('Replacing old version={} with new={}-{}'.format(old_ver, today_str, new_suffix))
-        stdout_write('\nUpdating version from {} to {}-{}\n'.format(old_ver, today_str, new_suffix), no_pipe_bypass)
+
+        if no_pipe_bypass:
+            log.info('Replacing old version={} with new={}-{}'.format(old_ver, today_str, new_suffix))
+        else:
+            stdout_write(' ({} -> {}-{}) '.format(old_ver, today_str, new_suffix))
         return '{0}{1}{2}-{3}{1}\n'.format(groups[0], groups[1], today_str, new_suffix)
 
 
