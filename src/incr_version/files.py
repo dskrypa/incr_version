@@ -7,20 +7,21 @@ from tempfile import TemporaryDirectory
 
 from .exceptions import VersionIncrError
 from .git import Git
-from .utils import running_under_precommit, get_precommit_cached, updated_version_line
+from .utils import running_under_precommit, get_precommit_cached, next_version, updated_version_line
 
 __all__ = ['VersionFile']
 log = logging.getLogger(__name__)
 
 _NotSet = object()
-VERSION_PAT = re.compile(r'^(\s*__version__\s?=\s?)(["\'])(\d{4}\.\d{2}\.\d{2})((?:-\d+)?)\2$')
+VERSION_PAT = re.compile(r'^(\s*__version__\s?=\s?)(["\'])(\d{4}\.\d{2}\.\d{2}(?:-\d+)?)\2$')
 
 
 class VersionFile:
-    def __init__(self, path: Path, encoding: str = 'utf-8'):
+    def __init__(self, path: Path, encoding: str = 'utf-8', dry_run=False):
         self.path = path  # type: Path
         self.encoding = encoding
         self._version = _NotSet
+        self.dry_run = dry_run
 
     def __repr__(self):
         return '<{}[path={}, version={!r}]>'.format(self.__class__.__name__, self.path.as_posix(), self.version)
@@ -71,7 +72,7 @@ class VersionFile:
                 for line in f:
                     m = VERSION_PAT.match(line)
                     if m:
-                        self._version = m.group(3) + m.group(4)
+                        self._version = m.group(3)
                         break
                 else:
                     self._version = None
@@ -95,13 +96,16 @@ class VersionFile:
                         m = VERSION_PAT.match(line)
                         if m:
                             found = True
-                            new_line = updated_version_line(m.groups(), no_pipe_bypass, force_suffix)
+                            new_line = updated_version_line(m.groups(), no_pipe_bypass, force_suffix, self.dry_run)
                             f_out.write(new_line)
                         else:
                             f_out.write(line)
             if found:
-                log.debug('Replacing original file={} with modified version'.format(self.path))
-                tmp_path.replace(self.path)
+                if self.dry_run:
+                    log.debug('[DRY RUN] Would replace original file={} with modified version'.format(self.path))
+                else:
+                    log.debug('Replacing original file={} with modified version'.format(self.path))
+                    tmp_path.replace(self.path)
             else:
                 raise VersionIncrError('No valid version was found in {}'.format(self.path))
 

@@ -5,6 +5,7 @@ from argparse import ArgumentParser
 from .exceptions import VersionIncrError
 from .files import VersionFile
 from .git import Git
+from .utils import parse_bool
 
 __all__ = ['VersionIncrError', 'main']
 log = logging.getLogger(__name__)
@@ -26,11 +27,16 @@ def _main():
     out_group = parser.add_argument_group('Output Options', 'Configure logging behavior')
     out_group.add_argument('--no_pipe_bypass', '-B', action='store_true', help='Do not bypass pre-commit\'s stdout pipe when printing the updated version number')
     out_group.add_argument('--debug', '-d', action='store_true', help='Show debug logging')
+    parser.add_argument('--dry_run', '-D', type=parse_bool, help='Show the actions that would be taken without modifying any files')
     args = parser.parse_args()
     # fmt: on
     logging.basicConfig(level=logging.DEBUG if args.debug else logging.INFO, format='%(message)s')
 
-    file = VersionFile.find(args.file, args.encoding)
+    if args.dry_run is None and not Git.get_current_commit_command():
+        log.debug('Running outside of a git commit - setting --dry_run=true')
+        args.dry_run = True
+
+    file = VersionFile.find(args.file, args.encoding, args.dry_run)
     log.debug('Found file={}'.format(file))
 
     if file.should_update(args.ignore_staged, args.update_amended, args.ignore_cache_age):

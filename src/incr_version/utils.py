@@ -13,7 +13,7 @@ from .exceptions import VersionIncrError
 
 __all__ = [
     'stdout_write', 'updated_version_line', 'running_under_precommit', 'get_precommit_cached', 'get_proc',
-    'get_git_commit_parent_cmdline'
+    'get_git_commit_parent_cmdline', 'next_version', 'parse_bool'
 ]
 log = logging.getLogger(__name__)
 
@@ -29,31 +29,35 @@ def stdout_write(msg, no_pipe_bypass=False):
             stdout.write(msg)
 
 
-def updated_version_line(groups, no_pipe_bypass, force_suffix=False):
-    old_date_str = groups[2]
-    old_date = datetime.strptime(old_date_str, '%Y.%m.%d').date()
-    old_suffix = groups[3]
-    old_ver = old_date_str + old_suffix
+def next_version(old_ver, force_suffix=False):
+    try:
+        old_date_str, old_suffix = old_ver.split('-')
+    except ValueError:
+        old_date_str = old_ver
+        old_suffix = ''
 
+    old_date = datetime.strptime(old_date_str, '%Y.%m.%d').date()
     today = datetime.now().date()
     today_str = today.strftime('%Y.%m.%d')
     if old_date < today and not force_suffix:
-        if no_pipe_bypass:
-            log.info('Replacing old version={} with new={}'.format(old_ver, today_str))
-        else:
-            stdout_write(' ({} -> {}) '.format(old_ver, today_str))
-        return '{0}{1}{2}{1}\n'.format(groups[0], groups[1], today_str)
+        return today_str
     else:
-        if old_suffix:
-            new_suffix = int(old_suffix[1:]) + 1
-        else:
-            new_suffix = 1
+        new_suffix = 1 + (int(old_suffix) if old_suffix else 0)
+        return '{}-{}'.format(today_str, new_suffix)
 
-        if no_pipe_bypass:
-            log.info('Replacing old version={} with new={}-{}'.format(old_ver, today_str, new_suffix))
-        else:
-            stdout_write(' ({} -> {}-{}) '.format(old_ver, today_str, new_suffix))
-        return '{0}{1}{2}-{3}{1}\n'.format(groups[0], groups[1], today_str, new_suffix)
+
+def updated_version_line(groups, no_pipe_bypass, force_suffix=False, dry_run=False):
+    old_ver = groups[2]
+    new_ver = next_version(old_ver, force_suffix)
+    if no_pipe_bypass:
+        prefix = '[DRY RUN] Would replace' if dry_run else 'Replacing'
+        log.info('{} old version={} with new={}'.format(prefix, old_ver, new_ver))
+    else:
+        # Even with pre-commit in verbose mode, this will be printed in-line because of the way it captures then prints
+        # output instead of letting output pass thru directly
+        prefix = '[DRY RUN] ' if dry_run else ''
+        stdout_write(' {}({} -> {}) '.format(prefix, old_ver, new_ver))
+    return '{0}{1}{2}{1}\n'.format(groups[0], groups[1], new_ver)
 
 
 def get_git_commit_parent_cmdline():
@@ -108,3 +112,17 @@ def get_proc():
         if proc.pid == pid:
             return proc
     raise VersionIncrError('Unable to find process with pid={} (this process)'.format(pid))
+
+
+def parse_bool(value):
+    original = value
+    if isinstance(value, bool):
+        return value
+    elif isinstance(value, str):
+        value = value.strip().lower()
+        if value in ('t', 'y', 'yes', 'true', '1'):
+            return True
+        elif value in ('f', 'n', 'no', 'false', '0'):
+            return False
+    # ValueError works with argparse to provide a useful error message
+    raise ValueError('Unable to parse boolean value from input: {!r}'.format(original))
