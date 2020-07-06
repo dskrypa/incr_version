@@ -25,7 +25,7 @@ class VersionFile:
     def __repr__(self):
         return '<{}[path={}, version={!r}]>'.format(self.__class__.__name__, self.path.as_posix(), self.version)
 
-    def should_update(self, ignore_staged=False):
+    def should_update(self, ignore_staged=False, update_amended=False):
         if self.is_modified_and_unstaged():
             fmt = (
                 'File={} was modified, but has not been staged to be committed - please `git add` or `git checkout` '
@@ -43,12 +43,14 @@ class VersionFile:
                 return False
 
             log.debug('File={} was already staged with changes, but it does not contain a version update'.format(self))
+        elif Git.current_commit_is_amending():
+            if not update_amended:
+                log.info('The current commit is using --amend - exiting')
+                return False
+            log.info('The current commit is using --amend - updating')
         else:
             log.debug('File={} is not already staged in git'.format(self))
 
-        # TODO: If parent git process has --amend arg, determine whether the version was updated in the original commit
-        # ['C:\\Program Files\\Git\\mingw64\\bin\\git.exe', 'commit', '-m', '<message>', '--amend']
-        # ['/.../git', 'commit', '-m', '<message>', '--amend']
         return True
 
     def is_modified_and_unstaged(self):
@@ -60,10 +62,7 @@ class VersionFile:
         return self.path.as_posix() in Git.get_staged()
 
     def staged_version_was_modified(self):
-        for line in Git.staged_changed_lines(self.path.as_posix()):
-            if VERSION_PAT.match(line):
-                return True
-        return False
+        return any(VERSION_PAT.match(line) for line in Git.staged_changed_lines(self.path.as_posix()))
 
     @property
     def version(self):

@@ -2,6 +2,7 @@ import logging
 from subprocess import Popen, PIPE
 
 from .exceptions import VersionIncrError
+from .utils import get_git_commit_parent_cmdline
 
 __all__ = ['Git']
 
@@ -70,3 +71,14 @@ class Git:
                 log.debug('Ignoring file={!r} with status={!r}'.format(file, status))
         log.debug('Modified files NOT staged in the current commit:\n{}'.format('\n'.join(files)))
         return files
+
+    @classmethod
+    def get_current_commit_command(cls):
+        return get_git_commit_parent_cmdline()
+
+    @classmethod
+    def current_commit_is_amending(cls):
+        cmdline = get_git_commit_parent_cmdline()
+        if not cmdline:
+            return False
+        return '--amend' in cmdline

@@ -11,7 +11,10 @@ import psutil
 
 from .exceptions import VersionIncrError
 
-__all__ = ['stdout_write', 'updated_version_line', 'running_under_precommit', 'get_precommit_cached', 'get_proc']
+__all__ = [
+    'stdout_write', 'updated_version_line', 'running_under_precommit', 'get_precommit_cached', 'get_proc',
+    'get_git_commit_parent_cmdline'
+]
 log = logging.getLogger(__name__)
 
 ON_WINDOWS = platform.system().lower() == 'windows'
@@ -46,6 +49,19 @@ def updated_version_line(groups, no_pipe_bypass, force_suffix=False):
         # log.info('Replacing old version={} with new={}-{}'.format(old_ver, today_str, new_suffix))
         stdout_write('\nUpdating version from {} to {}-{}\n'.format(old_ver, today_str, new_suffix), no_pipe_bypass)
         return '{0}{1}{2}-{3}{1}\n'.format(groups[0], groups[1], today_str, new_suffix)
+
+
+def get_git_commit_parent_cmdline():
+    for proc in get_proc().parents():
+        cmdline = list(map(str.lower, proc.cmdline()))
+        try:
+            prog, arg = cmdline[0:2]
+        except (IndexError, ValueError):
+            pass
+        else:
+            if arg == 'commit' and prog.endswith(('\\git.exe', '/git')):
+                return cmdline
+    return None
 
 
 def running_under_precommit():
