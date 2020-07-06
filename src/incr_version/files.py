@@ -7,7 +7,7 @@ from tempfile import TemporaryDirectory
 
 from .exceptions import VersionIncrError
 from .git import Git
-from .utils import running_under_precommit, get_precommit_cached, next_version, updated_version_line
+from .utils import running_under_precommit, get_precommit_cached, updated_version_line
 
 __all__ = ['VersionFile']
 log = logging.getLogger(__name__)
