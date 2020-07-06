@@ -17,10 +17,11 @@ def _main():
     parser.add_argument('--encoding', '-e', default='utf-8', help='The encoding used by the version file (default: %(default)s)')
 
     opt_group = parser.add_argument_group('Behavior Options', 'Configure file/version handling behavior')
-    opt_group.add_argument('--ignore_staged', '-i', action='store_true', help='Assume already staged version file contains updated version')
     opt_group.add_argument('--suffix', '-s', action='store_true', help='Force use of a numeric suffix, even on the first version for a given day')
     opt_group.add_argument('--no_add', '-A', action='store_true', help='Do not add the version file to git after making changes to it')
     opt_group.add_argument('--update_amended', '-u', action='store_true', help='Update the version even when running under `git commit --amend`')
+    opt_group.add_argument('--ignore_staged', '-S', action='store_true', help='Assume already staged version file contains updated version')
+    opt_group.add_argument('--ignore_cache_age', '-C', action='store_true', help='Ignore the age of the pre-commit unstaged file cache and assume the latest cache is for the current commit')
 
     out_group = parser.add_argument_group('Output Options', 'Configure logging behavior')
     out_group.add_argument('--no_pipe_bypass', '-B', action='store_true', help='Do not bypass pre-commit\'s stdout pipe when printing the updated version number')
@@ -32,7 +33,7 @@ def _main():
     file = VersionFile.find(args.file, args.encoding)
     log.debug('Found file={}'.format(file))
 
-    if file.should_update(args.ignore_staged, args.update_amended):
+    if file.should_update(args.ignore_staged, args.update_amended, args.ignore_cache_age):
         file.update_version(args.no_pipe_bypass, args.suffix)
         if args.no_add:
             log.debug('Skipping `git add {}`'.format(file.path.as_posix()))

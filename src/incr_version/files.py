@@ -25,8 +25,8 @@ class VersionFile:
     def __repr__(self):
         return '<{}[path={}, version={!r}]>'.format(self.__class__.__name__, self.path.as_posix(), self.version)
 
-    def should_update(self, ignore_staged=False, update_amended=False):
-        if self.is_modified_and_unstaged():
+    def should_update(self, ignore_staged=False, update_amended=False, ignore_cache_age=False):
+        if self.is_modified_and_unstaged(ignore_cache_age):
             fmt = (
                 'File={} was modified, but has not been staged to be committed - please `git add` or `git checkout` '
                 'this file to proceed'
@@ -53,9 +53,9 @@ class VersionFile:
 
         return True
 
-    def is_modified_and_unstaged(self):
+    def is_modified_and_unstaged(self, ignore_cache_age=False):
         if running_under_precommit():
-            return self.path.as_posix() in get_precommit_cached()
+            return self.path.as_posix() in get_precommit_cached(ignore_cache_age)
         return self.path.as_posix() in Git.get_unstaged_modified()
 
     def is_staged(self):

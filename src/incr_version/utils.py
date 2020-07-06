@@ -70,14 +70,21 @@ def running_under_precommit():
     return any(proc.cmdline() == pre_commit_cmd for proc in this_proc.parents())
 
 
-def get_precommit_cached():
+def get_precommit_cached(ignore_cache_age=False):
+    """
+    :param bool ignore_cache_age: Ignore the age of the cache file and assume that the latest file is for the current
+      commit.  Pre-commit does not keep the file open, so it is not possible to examine the open files of the parent
+      pre-commit process to determine which is the correct file.  It only stores the filename in its own memory; it does
+      not provide any external means of correlating the pid/commit with the file.
+    :return set: The files that were modified, but not staged for the commit, and were cached in a patch file by
+      pre-commit
+    """
     cache_dir = Path('~/.cache/pre-commit/').expanduser().resolve()
     patches = [p.name for p in cache_dir.iterdir() if p.name.startswith('patch')]
     latest = cache_dir.joinpath(max(patches))
     age = time.time() - latest.stat().st_mtime
-    if age > 5:
+    if age > 5 and not ignore_cache_age:
         log.debug('The pre-commit cache file is {:,.3f}s old - ignoring it')
-        # TODO: Check pre-commit proc for open files and if the file is open for it, in case another hook ran slowly
         return set()
 
     diff_match = re.compile(r'diff --git a/(.*?) b/\1$').match
