@@ -117,7 +117,7 @@ class VersionFile:
                 return cls(path, *args, **kwargs)
             raise VersionIncrError('--file / -f must be the path to a file that exists')
 
-        ignore = re.compile(r'[/\\](\.?venv|site-packages)(?:[/\\]|$)', re.IGNORECASE).search
+        ignore = re.compile(r'[/\\](\.?venv|site-packages|build)(?:[/\\]|$)', re.IGNORECASE).search
         for root, dirs, files in os.walk(os.getcwd()):
             if not ignore(root):
                 root = Path(root)

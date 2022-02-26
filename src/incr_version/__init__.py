@@ -30,7 +30,10 @@ def _main():
     parser.add_argument('--dry_run', '-D', type=parse_bool, help='Show the actions that would be taken without modifying any files')
     args = parser.parse_args()
     # fmt: on
-    logging.basicConfig(level=logging.DEBUG if args.debug else logging.INFO, format='%(message)s')
+    if args.debug:
+        logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s %(name)s %(lineno)d %(message)s')
+    else:
+        logging.basicConfig(level=logging.INFO, format='%(message)s')
 
     if args.dry_run is None and not Git.get_current_commit_command():
         log.debug('Running outside of a git commit - setting --dry_run=true')
