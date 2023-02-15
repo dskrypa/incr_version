@@ -1,0 +1,2 @@
+[console_scripts]
+incr_version = incr_version:main

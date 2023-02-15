@@ -1,3 +1,4 @@
+fail_fast: true
 repos:
   - repo: local
     hooks:
@@ -7,4 +8,14 @@ repos:
         language: python
         language_version: python3
         pass_filenames: false
-        args: ['-f', 'src/__version__.py']
+        args: ['-f', 'src/incr_version/__version__.py']
+  - repo: https://github.com/grantjenks/blue
+    rev: v0.9.1
+    hooks:
+      - id: blue
+        types: [python]
+  - repo: https://github.com/PyCQA/flake8
+    rev: 6.0.0
+    hooks:
+      - id: flake8
+        types: [python]
