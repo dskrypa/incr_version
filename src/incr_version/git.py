@@ -1,59 +1,57 @@
 import logging
-from subprocess import Popen, PIPE
+from subprocess import PIPE, Popen
+from typing import Iterator
 
 from .exceptions import VersionIncrError
 from .utils import get_git_commit_parent_cmdline
 
 __all__ = ['Git']
-
 log = logging.getLogger(__name__)
 
 
 class Git:
     @classmethod
-    def run(cls, *args):
-        cmd = ['git']
-        cmd.extend(args)
+    def run(cls, *args: str) -> str:
+        cmd = ['git', *args]
         cmd_str = ' '.join(cmd)
-        log.debug('Executing `{}`'.format(cmd_str))
+        log.debug(f'Executing `{cmd_str}`')
         proc = Popen(cmd, stdout=PIPE, stderr=PIPE)
         stdout, stderr = proc.communicate()
-        code = proc.wait()
-        if code != 0:
-            err_msg_parts = ['Error executing `{}` - exit code={}'.format(cmd_str, code)]
+        if (code := proc.wait()) != 0:
+            err_msg_parts = [f'Error executing `{cmd_str}` - exit {code=}']
             if stdout:
-                err_msg_parts.append('stdout:\n{}'.format(stdout))
+                err_msg_parts.append(f'stdout:\n{stdout}')
             if stderr:
                 prefix = '\n' if stdout else ''
-                err_msg_parts.append('{}stderr:\n{}'.format(prefix, stderr))
+                err_msg_parts.append(f'{prefix}stderr:\n{stderr}')
             raise VersionIncrError('\n'.join(err_msg_parts))
         if stderr:
-            log.warning('Found stderr for cmd=`{}`:\n{}'.format(cmd_str, stderr))
+            log.warning(f'Found stderr for cmd=`{cmd_str}`:\n{stderr}')
         return stdout.decode('utf-8')
 
     @classmethod
-    def add(cls, *args):
+    def add(cls, *args: str) -> str:
         return cls.run('add', *args)
 
     @classmethod
-    def get_staged(cls):
+    def get_staged(cls) -> set[str]:
         files = cls.run('diff', '--name-only', '--cached').splitlines()
-        log.debug('Files staged in the current commit:\n{}'.format('\n'.join(files)))
+        log.debug('Files staged in the current commit:\n' + '\n'.join(files))
         return set(files)
 
     @classmethod
-    def has_stashed(cls):
+    def has_stashed(cls) -> bool:
         return bool(cls.run('stash', 'list').strip())
 
     @classmethod
-    def staged_changed_lines(cls, path):
+    def staged_changed_lines(cls, path: str) -> Iterator[str]:
         stdout = cls.run('diff', '--staged', '--no-color', '-U0', path)
         for line in stdout.splitlines():
             if line.startswith('+') and not line.startswith('+++ b/'):
                 yield line[1:]
 
     @classmethod
-    def get_unstaged_modified(cls):
+    def get_unstaged_modified(cls) -> set[str]:
         if cls.has_stashed():
             staged = cls.get_staged()
             cmd = ('stash', 'show', '--name-status')
@@ -63,22 +61,21 @@ class Git:
 
         files = set()
         for line in cls.run(*cmd).splitlines():
-            log.debug('diff line={!r}'.format(line))
+            log.debug(f'diff {line=}')
             status, file = map(str.strip, line.split(maxsplit=1))
             if status == 'M' and file not in staged:
                 files.add(file)
             else:
-                log.debug('Ignoring file={!r} with status={!r}'.format(file, status))
-        log.debug('Modified files NOT staged in the current commit:\n{}'.format('\n'.join(files)))
+                log.debug(f'Ignoring {file=} with {status=}')
+        log.debug('Modified files NOT staged in the current commit:\n' + '\n'.join(files))
         return files
 
     @classmethod
-    def get_current_commit_command(cls):
+    def get_current_commit_command(cls) -> list[str] | None:
         return get_git_commit_parent_cmdline()
 
     @classmethod
-    def current_commit_is_amending(cls):
-        cmdline = get_git_commit_parent_cmdline()
-        if not cmdline:
-            return False
-        return '--amend' in cmdline
+    def current_commit_is_amending(cls) -> bool:
+        if cmdline := get_git_commit_parent_cmdline():
+            return '--amend' in cmdline
+        return False

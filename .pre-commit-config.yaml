@@ -9,13 +9,17 @@ repos:
         language_version: python3
         pass_filenames: false
         args: ['-f', 'src/incr_version/__version__.py']
-  - repo: https://github.com/grantjenks/blue
-    rev: v0.9.1
-    hooks:
-      - id: blue
+      - id: ruff-check
+        name: ruff-check
+        entry: ruff
+        args: ['check', '--fix']
+        language: system
         types: [python]
-  - repo: https://github.com/PyCQA/flake8
-    rev: 6.0.0
-    hooks:
-      - id: flake8
+        stages: [commit]
+      - id: ruff-format
+        name: ruff-format
+        entry: ruff
+        args: [format]
+        language: system
         types: [python]
+        stages: [commit]
